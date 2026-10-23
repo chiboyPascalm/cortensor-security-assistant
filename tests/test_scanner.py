@@ -22,6 +22,11 @@ class ScannerTests(unittest.TestCase):
         findings = scan_solidity("target.call(data);")
         self.assertTrue(any(f["rule"] == "SOL002" for f in findings))
 
+    def test_checked_low_level_call_is_detected_for_review(self):
+        source = "(bool success, ) = target.call(data); require(success, \"Call failed\");"
+        findings = scan_solidity(source)
+        self.assertTrue(any(f["rule"] == "SOL002" for f in findings))
+
     def test_detects_delegatecall(self):
         findings = scan_solidity("target.delegatecall(data);")
         self.assertTrue(any(f["rule"] == "SOL003" for f in findings))

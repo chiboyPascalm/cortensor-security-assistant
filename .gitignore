@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.openminion/agents.json
+.openminion/.env
+.openminion/.env.*
+backups/
+*.tar
+*.tar.gz
+*.zip
+.vscode/
+.idea/
+.DS_Store
+
+# Local application backups
+*.backup*
+*.before-*
+*.bak
+
+# Keep local OpenMinion configuration private
+.openminion/

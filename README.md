@@ -39,7 +39,7 @@ The included `samples/vulnerable_example.sol` produced two findings in the demon
 - **SOL005 — HIGH, line 12:** `tx.origin` appears in an equality check that may be used for authorization.
 - **SOL002 — REVIEW, line 17:** A low-level external call was detected.
 
-OpenMinion generated explanations and recommendations for both findings. The scanner tests also passed: all 11 unit tests succeeded.
+OpenMinion generated explanations and recommendations for both findings. The scanner tests also passed: all 16 unit tests succeeded.
 
 ## OpenMinion integration
 
@@ -69,3 +69,21 @@ Export a JSON report:
 Run the tests:
 
     .venv/bin/python -m unittest discover -s tests -v
+
+## Building Blocks Tested
+
+- **Solidity pattern scanner:** Tested detection of `tx.origin`, possible `tx.origin` authorization checks, low-level `.call(...)`, `delegatecall`, and `selfdestruct` patterns.
+- **Comment and string filtering:** Tests verify that supported patterns inside comments and quoted strings are ignored.
+- **Local explanations:** Verified predefined explanations and recommendations for detected findings without requiring an external model.
+- **JSON reports:** Automated tests cover valid JSON export, zero findings, local explanations, and the safety notice.
+- **OpenMinion integration:** The application invokes OpenMinion in AI mode. During the latest demonstration, the configured model provider rejected the request because its free-model daily quota was exceeded.
+- **Automated tests:** All 16 tests passed in the latest recorded test run.
+
+## What We Learned
+
+- Pattern-based scanning can highlight code that deserves review, but a pattern match does not establish that a vulnerability exists.
+- A clean scan does not prove a smart contract is secure.
+- Low-level calls require review of success handling, access controls, external-call ordering, and possible reentrancy. Detecting a call alone does not prove that these issues exist.
+- Predefined local explanations allow the prototype to provide guidance even when an external model is unavailable.
+- AI features depend on the configured model provider's availability and usage limits. Provider failures must be reported honestly without hiding the scanner's results.
+- Further development should improve Solidity syntax and control-flow analysis, expand the test suite, and verify AI-generated recommendations against the actual contract.

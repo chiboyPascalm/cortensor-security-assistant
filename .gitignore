@@ -24,3 +24,9 @@ backups/
 
 # Keep local OpenMinion configuration private
 .openminion/
+
+# Local OpenMinion identity data
+identity/
+
+# Generated scan reports
+reports/*.json

@@ -17,61 +17,62 @@ def print_report(report: dict) -> None:
 
 
 def run_ai_explanation(source_code: str, report: dict) -> int:
-    """Ask OpenMinion to explain the deterministic scanner report."""
-    try:
-        from openminion import Agent
-        import uuid
+    """Use OpenMinion to explain findings with a concise prompt."""
+    import os
+    import subprocess
 
-        instructions = """
-You are the Cortensor Security Assistant, a Solidity security reviewer.
-Explain only the findings provided in the current scan report.
-For each finding, explain its rule ID, severity, line, risk, and recommendation.
-Distinguish pattern matches from confirmed vulnerabilities.
-Never claim that a contract is secure based only on this scanner.
-"""
-
-        prompt = (
-            "Explain this Solidity scan report in plain English. "
-            "Include every finding's rule ID, severity, and line number. "
-            "Do not invent findings or claim that a pattern match proves a vulnerability.\n\n"
-            "SCAN REPORT:\n"
-            + json.dumps(report, indent=2)
-            + "\n\nSOURCE CODE:\n"
-            + source_code
-        )
-
-        with Agent(
-            name="Cortensor Security Assistant",
-            config_path=".openminion/agents.json",
-            agent_id="openminion",
-            instructions=instructions,
-            session_id="cortensor-scan-" + uuid.uuid4().hex,
-        ) as agent:
-            result = agent.run(prompt)
-
-        if getattr(result, "run_state", None) != "completed":
-            print(
-                "\nOpenMinion did not complete the explanation. "
-                "The deterministic report remains available.",
-                file=sys.stderr,
-            )
-            return 1
-
-        print("\n========== OPENMINION EXPLANATION ==========")
-        print(result.text or "(The model returned an empty response.)")
+    findings = report.get("findings", [])
+    if not findings:
+        print("\nNo findings were reported; skipping AI explanation.")
         return 0
 
-    except Exception as exc:
-        print(
-            f"\nOpenMinion explanation unavailable: "
-            f"{type(exc).__name__}: {exc}",
-            file=sys.stderr,
-        )
-        print(
-            "The deterministic scanner report above is still available.",
-            file=sys.stderr,
-        )
+    summary = []
+    for finding in findings:
+        summary.append({
+            key: finding.get(key)
+            for key in ("rule_id", "id", "rule", "severity", "line", "title", "description", "recommendation", "message")
+            if finding.get(key) is not None
+        })
+
+    prompt = (
+        "You are a Solidity security reviewer. Briefly explain these pattern-based findings. "
+        "For each, state the possible risk and one practical recommendation. "
+        "Treat findings as potential risks, not confirmed vulnerabilities. "
+        "Do not claim the contract is secure.\n\nFINDINGS:\n"
+        + json.dumps(summary, ensure_ascii=False)
+    )
+
+    cli = os.path.join(os.path.dirname(sys.executable), "openminion")
+    if not os.path.isfile(cli):
+        print("Project OpenMinion CLI not found.", file=sys.stderr)
         return 1
+
+    try:
+        result = subprocess.run(
+            [
+                cli, "run", "--profile", "openminion",
+                "--runtime-source", "inproc", "--reset-session",
+                "--progress", "off", prompt,
+            ],
+            timeout=90,
+        )
+        if result.returncode != 0:
+            print("OpenMinion CLI failed:", file=sys.stderr)
+            print("OpenMinion exited with a non-zero status.", file=sys.stderr)
+            print("The deterministic report remains available.", file=sys.stderr)
+            return 1
+        print("\n========== OPENMINION EXPLANATION =========")
+        print("OpenMinion explanation completed successfully.")
+        return 0
+    except subprocess.TimeoutExpired:
+        print("OpenMinion timed out after 90 seconds.", file=sys.stderr)
+        print("The deterministic report remains available.", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"OpenMinion unavailable: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print("The deterministic report remains available.", file=sys.stderr)
+        return 1
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(

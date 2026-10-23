@@ -51,3 +51,21 @@ This is a prototype for pattern-based Solidity screening, not a complete audit o
 
 ## Hackathon
 This prototype explores using the OpenMinion SDK to explain Solidity scanner findings.
+
+## Usage
+
+Run the scanner:
+
+    .venv/bin/python app.py
+
+Show local explanations:
+
+    .venv/bin/python app.py --local-explanation
+
+Export a JSON report:
+
+    .venv/bin/python app.py --json-output reports/sample-report.json
+
+Run the tests:
+
+    .venv/bin/python -m unittest discover -s tests -v
